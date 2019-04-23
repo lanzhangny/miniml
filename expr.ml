@@ -93,25 +93,49 @@ let subst (var_name : varid) (repl : expr) (exp : expr) : expr =
     
 (* exp_to_concrete_string : expr -> string
    Returns a concrete syntax string representation of the expr *)
-let exp_to_concrete_string (exp : expr) : string =
-  failwith "exp_to_concrete_string not implemented" ;;
+let rec exp_to_concrete_string (exp : expr) : string =
+  match exp with
+  | Var (v) -> v
+  | Num (i) -> string_of_int i
+  | Bool (b) -> string_of_bool b
+  | Unop (u, e) -> "~- " ^ (exp_to_concrete_string e)
+  | Binop (b, e1, e2) -> (exp_to_concrete_string e1) ^
+                         (match b with
+                          | Plus -> " + "
+                          | Minus -> " - "
+                          | Times -> " * "
+                          | Equals -> " = "
+                          | LessThan -> " < "
+                          ) ^ (exp_to_concrete_string e2)
+  | Conditional (e1, e2, e3) -> "if " ^ (exp_to_concrete_string e1) ^
+                                " then " ^ (exp_to_concrete_string e2) ^
+                                " else " ^ (exp_to_concrete_string e3)
+  | Fun (v, e) -> "fun " ^ v ^ " -> " ^ (exp_to_concrete_string e)
+  | Let (v, e1, e2) -> "let " ^ v ^ " = " ^ (exp_to_concrete_string e1) ^
+                       " in " ^ (exp_to_concrete_string e2)
+  | Letrec (v, e1, e2) -> "let rec " ^ v ^ " = " ^ (exp_to_concrete_string e1) ^
+                       " in " ^ (exp_to_concrete_string e2)
+  | Raise -> "Raise"
+  | Unassigned -> "Unassigned"
+  | App (e1, e2) -> (exp_to_concrete_string e1) ^ " (" ^
+                    (exp_to_concrete_string e2) ^ ")" ;;
 
 (* exp_to_abstract_string : expr -> string
    Returns a string representation of the abstract syntax of the expr *)
 let rec exp_to_abstract_string (exp : expr) : string =
   match exp with
-  | Var(v) -> "Var(" ^ v ^ ")"
-  | Num(i) -> "Num(" ^ (string_of_int i) ^ ")"
-  | Bool(b) -> "Bool(" ^ (string_of_bool b) ^ ")"
-  | Unop (u, e) -> "Unop(" ^ "~-" ^ (exp_to_abstract_string e) ^ ")"
+  | Var (v) -> "Var(" ^ v ^ ")"
+  | Num (i) -> "Num(" ^ (string_of_int i) ^ ")"
+  | Bool (b) -> "Bool(" ^ (string_of_bool b) ^ ")"
+  | Unop (u, e) -> "Unop(" ^ "Negate" ^ ", " ^ (exp_to_abstract_string e) ^ ")"
   | Binop (b, e1, e2) -> "Binop(" ^ (match b with
                                      | Plus -> "Plus"
                                      | Minus -> "Minus"
                                      | Times -> "Times"
                                      | Equals -> "Equals"
                                      | LessThan -> "LessThan") ^ ", " ^
-                        (exp_to_abstract_string e1) ^ ", " ^ 
-                        (exp_to_abstract_string e2) ^ ")"
+                          (exp_to_abstract_string e1) ^ ", " ^ 
+                          (exp_to_abstract_string e2) ^ ")"
   | Conditional (e1, e2, e3) -> "Conditional(" ^ (exp_to_abstract_string e1) ^ ", " ^
                                 (exp_to_abstract_string e2) ^ ", " ^ 
                                 (exp_to_abstract_string e3) ^ ")"
