@@ -98,5 +98,28 @@ let exp_to_concrete_string (exp : expr) : string =
 
 (* exp_to_abstract_string : expr -> string
    Returns a string representation of the abstract syntax of the expr *)
-let exp_to_abstract_string (exp : expr) : string =
-  failwith "exp_to_abstract_string not implemented" ;;
+let rec exp_to_abstract_string (exp : expr) : string =
+  match exp with
+  | Var(v) -> "Var(" ^ v ^ ")"
+  | Num(i) -> "Num(" ^ (string_of_int i) ^ ")"
+  | Bool(b) -> "Bool(" ^ (string_of_bool b) ^ ")"
+  | Unop (u, e) -> "Unop(" ^ "~-" ^ (exp_to_abstract_string e) ^ ")"
+  | Binop (b, e1, e2) -> "Binop(" ^ (match b with
+                                     | Plus -> "Plus"
+                                     | Minus -> "Minus"
+                                     | Times -> "Times"
+                                     | Equals -> "Equals"
+                                     | LessThan -> "LessThan") ^ ", " ^
+                        (exp_to_abstract_string e1) ^ ", " ^ 
+                        (exp_to_abstract_string e2) ^ ")"
+  | Conditional (e1, e2, e3) -> "Conditional(" ^ (exp_to_abstract_string e1) ^ ", " ^
+                                (exp_to_abstract_string e2) ^ ", " ^ 
+                                (exp_to_abstract_string e3) ^ ")"
+  | Fun (v, e) -> "Fun(" ^ v ^ ", " ^ (exp_to_abstract_string e) ^ ")"
+  | Let (v, e1, e2) -> "Let(" ^ v ^ ", " ^ (exp_to_abstract_string e1) ^
+                       ", " ^ (exp_to_abstract_string e2) ^ ")"
+  | Letrec (v, e1, e2) -> "Letrec(" ^ v ^ ", " ^ (exp_to_abstract_string e1) ^
+                       ", " ^ (exp_to_abstract_string e2) ^ ")"
+  | Raise -> "Raise"
+  | Unassigned -> "Unassigned"
+  | App (e1, e2) -> "App(" ^ (exp_to_abstract_string e1) ^ ", " ^ (exp_to_abstract_string e2) ^ ")";;
