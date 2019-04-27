@@ -8,7 +8,7 @@
  open Expr ;;
  open Evaluation ;;
 
-
+(* defining different expressions *)
 let exp_1 = Let ("x", Num (3), Let ("y", Var("x"), App (Var("f"), App (Var("x"), Var("y"))))) ;;
 let exp_2 = Let ("x", Num (30), Let ("x", Let ("x", Num (3), Binop (Times, Var("x"), Num(10))), Binop (Plus, Var("x"), Var("x")))) ;;
 let exp_3 = App (Fun ("x", Binop (Plus, Var("x"), Var("y"))), Var("z")) ;;
@@ -18,7 +18,8 @@ let exp_5 = Letrec ("f", Fun ("n", Conditional (Binop(Equals, Var("n"), Num(0)),
 let exp_6 = Let ("x", Var("x"), Let ("y", Var("x"), App (Var("f"), App (Var("x"), Var("y"))))) ;;
 let exp_7 = Let ("x", Binop (Times, Var("y"), Var("y")), Binop (Plus, Var("x"), Var("x"))) ;;
 let exp_8 = Fun ("y", Binop (Plus, Var("x"), Var("y"))) ;;
-let exp_9 = Let ("x", Binop (Plus, Var "x", Var "y"), Binop (Times, Var "z", Var "x"))
+let exp_9 = Let ("x", Binop (Plus, Var "x", Var "y"), Binop (Times, Var "z", Var "x")) ;;
+let exp_10 = Letrec ("f", Fun ("x", Conditional (Binop (LessThan, Var("x"), Num(1)), Num(1), Binop(Plus, (App(Var("f"), Binop (Minus, Var("x"), Num(1)))), (App(Var("f"), Binop (Minus, Var("x"), Num(2))))))), App(Var("f"), Num(5))) ;;
 
 (* free_vars tests *)
 let free_vars_tests() =
@@ -50,7 +51,9 @@ let eval_s_tests() =
   assert (eval_s (exp_2) (Env.create()) = Env.Val (Num (60))) ;
   assert (eval_s (Let ("x", Num(3), Let ("y", Binop (Times, Var "x", Var "x"), Var "y"))) (Env.create()) = Env.Val (Num (9))) ;
   assert (eval_s (Let ("x", Num(8), Conditional(Binop(Equals, Var "x", Num(3)), Num(1), Num(0)))) (Env.create()) = Env.Val (Num (0))) ;
-  assert (eval_s (Let ("x", Bool(true), Conditional(Var("x"), Num(1), Num(0)))) (Env.create()) = Env.Val(Num(1))) ;;
+  assert (eval_s (Let ("x", Bool(true), Conditional(Var("x"), Num(1), Num(0)))) (Env.create()) = Env.Val(Num(1))) ;
+  assert (eval_s (App ((Fun ("x", Binop (Plus, Var("x"), Var("x")))), Num(5))) (Env.create()) = Env.Val (Num(10))) ;
+  assert (eval_s (exp_10) (Env.create()) = Env.Val (Num(13))) ;;
 
 let _ =
   free_vars_tests() ;
