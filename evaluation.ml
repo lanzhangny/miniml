@@ -99,8 +99,31 @@ let eval_t (exp : expr) (_env : Env.env) : Env.value =
 
 (* The SUBSTITUTION MODEL evaluator -- to be completed *)
    
-let eval_s (_exp : expr) (_env : Env.env) : Env.value =
-  failwith "eval_s not implemented" ;;
+let eval_s (exp : expr) (_env : Env.env) : Env.value =
+  let rec eval_helper (exp : expr) : expr =
+  match exp with
+  | Var _ -> raise (EvalError "Unbound Variable")
+  | Num _ | Bool _ | Fun (_, _)| Raise | Unassigned -> exp
+  | Unop (op, arg) -> (match op, eval_helper arg with
+  	                   | Negate, Num x -> Num (~-x)
+  	                   | _, _ -> raise (EvalError "Invalid Unary Operation"))
+  | Binop (op, e1, e2) -> (match op, eval_helper e1, eval_helper e2 with
+                           | Plus, Num x, Num y -> Num (x + y)
+                           | Minus, Num x, Num y -> Num (x - y)
+                           | Times, Num x, Num y -> Num (x * y)
+                           | Equals, Num x, Num y -> Bool (x = y)
+                           | LessThan, Num x, Num y -> Bool (x < y)
+                           | Equals, Bool x, Bool y -> Bool (x && y)
+                           | _, _, _ -> raise (EvalError "Invalid Binary Operation"))
+  | Conditional (e1, e2, e3) -> (match eval_helper e1 with
+                                 | Bool b -> if b then eval_helper e2 else eval_helper e3
+                                 | _ -> raise (EvalError "Invalid Conditional Statement"))
+  | Let (x, def, body) -> eval_helper (subst x (eval_helper def) body)
+  | Letrec (x, def, body) -> eval_helper (subst x (subst x (Letrec (x, (eval_helper def), Var(x))) (eval_helper def)) body)
+  | App (e1, e2) -> (match eval_helper e1 with
+                     | Fun (x, e) -> eval_helper (subst x (eval_helper e2) e)
+                     | _ -> raise (EvalError "Invalid Application")) in
+  Env.Val (eval_helper exp) ;;
      
 (* The DYNAMICALLY-SCOPED ENVIRONMENT MODEL evaluator -- to be
    completed *)
@@ -130,4 +153,4 @@ let eval_e _ =
    above, not the evaluate function, so it doesn't matter how it's set
    when you submit your solution.) *)
    
-let evaluate = eval_t ;;
+let evaluate = eval_s ;;
