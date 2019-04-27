@@ -81,12 +81,6 @@ let rec free_vars (exp : expr) : varidset =
    gensym. Assumes no variable names use the prefix "var". (Otherwise,
    they might accidentally be the same as a generated variable name.) *)
 
-(*   let gensym : string -> string =
-  let ctr = ref 0 in
-  fun s -> let v = s ^ string_of_int !ctr in
-           ctr := !ctr + 1;
-           v ;; *)
-
 let new_varname : unit -> varid =
   let ctr = ref 0 in
   fun () -> let new_var = "var" ^ string_of_int !ctr in
