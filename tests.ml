@@ -37,6 +37,7 @@ let subst_tests() =
   assert (subst ("x") (Num(3)) (exp_7) = Let ("x", Binop (Times, Var "y", Var "y"), Binop (Plus, Var "x", Var "x"))) ;
   assert (subst ("y") (Num(3)) (exp_7) = Let ("x", Binop (Times, Num 3, Num 3), Binop (Plus, Var "x", Var "x"))) ;
   assert (subst ("x") (Var("y")) (exp_8) = Fun ("var0", Binop (Plus, Var "y", Var "var0"))) ;;
+  assert (subst ("n") (Num(4)) (exp_5) = exp_5) ;;
 
 let _ =
   free_vars_tests() ;
