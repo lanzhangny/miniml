@@ -45,29 +45,36 @@ module Env : Env_type =
     (* Creates a closure from an expression and the environment it's
        defined in *)
     let close (exp : expr) (env : env) : value =
-      failwith "close not implemented" ;;
+      Closure (exp, env) ;;
 
     (* Looks up the value of a variable in the environment *)
     let lookup (env : env) (varname : varid) : value =
-      failwith "lookup not implemented" ;;
+      try !(List.assoc varname env) 
+      with Not_found -> raise (EvalError "Variable DNE")
 
     (* Returns a new environment just like env except that it maps the
        variable varid to loc *)
     let extend (env : env) (varname : varid) (loc : value ref) : env =
-      failwith "extend not implemented" ;;
+      (varname, loc) :: (List.remove_assoc varname env)
 
     (* Returns a printable string representation of a value; the flag
        printenvp determines whether to include the environment in the
        string representation when called on a closure *)
-    let value_to_string ?(printenvp : bool = true) (v : value) : string =
-      failwith "value_to_string not implemented" ;;
+    let rec value_to_string ?(printenvp : bool = true) (v : value) : string =
+      match v with
+      | Val e -> exp_to_concrete_string e
+      (* PICK UP HERE!! *)
+      | Closure (e, env) -> if printenvp then "[Expr:" ^ 
+                               (exp_to_concrete_string e) ^ ", " ^ 
+                               "Env:" ^ "{" ^ (List.fold_right (^) 
+                               	  (List.map (fun (var, valref) -> "(" ^ var ^ ", " ^ (value_to_string !valref) ^ "); ") env) "") ^ "}]"
+                             else exp_to_concrete_string e ;;
 
     (* Returns a printable string representation of an environment *)
     let env_to_string (env : env) : string =
-      failwith "env_to_string not implemented" ;;
+      "{" ^ (List.fold_right (^) (List.map (fun (var, valref) -> "(" ^ var ^ ", " ^ (value_to_string !valref) ^ "); ") env) "") ^ "}" ;;
   end
 ;;
-
 
 (*......................................................................
   Evaluation functions
