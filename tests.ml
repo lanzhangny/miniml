@@ -1,7 +1,7 @@
 (* 
-                				MiniML
+                				  MiniML
                           	CS51 Final Project
-                          	     All Tests
+                          	    All Tests
                          -.-. ... ..... .----
  *)
 
@@ -20,6 +20,8 @@ let exp_7 = Let ("x", Binop (Times, Var("y"), Var("y")), Binop (Plus, Var("x"), 
 let exp_8 = Fun ("y", Binop (Plus, Var("x"), Var("y"))) ;;
 let exp_9 = Let ("x", Binop (Plus, Var "x", Var "y"), Binop (Times, Var "z", Var "x")) ;;
 let exp_10 = Letrec ("f", Fun ("x", Conditional (Binop (LessThan, Var("x"), Num(1)), Num(1), Binop(Plus, (App(Var("f"), Binop (Minus, Var("x"), Num(1)))), (App(Var("f"), Binop (Minus, Var("x"), Num(2))))))), App(Var("f"), Num(5))) ;;
+let exp_11 = Let ("x", Num(1), Let ("f", Fun ("y", Binop (Plus, Var("x"), Var("y"))), Let ("x", Num(2), App(Var("f"), Num(3))))) ;;
+let exp_12 = Let ("x", Num(5), Let ("f", Fun ("y", Binop (Times, Num(2), Binop (Times, Var("x"), Var("y")))), Let ("x", Num(3), App (Var("f"), Num(4))))) ;;
 
 (* free_vars tests *)
 let free_vars_tests() =
@@ -71,8 +73,24 @@ let env_mod_tests() =
   let closure2 = Env.close (exp_2) (env) in
   assert (Env.value_to_string closure2 = "[Expr: let x = 30 in let x = let x = 3 in x * 10 in x + x, Env: {(y, true); (x, 3)}]") ;;
 
+(* eval_d tests *)
+let eval_d_tests() =
+  assert (eval_d (exp_11) (Env.create()) = Env.Val (Num(5))) ;
+  assert (eval_d (exp_12) (Env.create()) = Env.Val (Num(24))) ;
+  assert (eval_d (exp_10) (Env.create()) = Env.Val (Num(13))) ;
+  assert (eval_d (exp_5) (Env.create()) = Env.Val (Num (24))) ;;
+
+(* eval_l tests *)
+let eval_l_tests() =
+  assert (eval_l (exp_11) (Env.create()) = Env.Val (Num(4))) ;
+  assert (eval_l (exp_12) (Env.create()) = Env.Val (Num(40))) ;
+  assert (eval_l (exp_10) (Env.create()) = Env.Val (Num(13))) ;
+  assert (eval_l (exp_5) (Env.create()) = Env.Val (Num (24))) ;;
+
 let _ =
   free_vars_tests() ;
   subst_tests() ;
   eval_s_tests() ;
-  env_mod_tests() ;;
+  env_mod_tests() ;
+  eval_d_tests() ;
+  eval_l_tests() ;;
