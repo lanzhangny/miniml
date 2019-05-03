@@ -169,9 +169,10 @@ let rec eval_d (exp : expr) (env : Env.env) : Env.value =
                            | Val (definition) -> eval_d body (extend env x (ref (Val (definition))))
                            | _ -> raise (EvalError "Invalid Let"))
   | Letrec (x, def, body) -> let temp_val = ref (Val Unassigned) in
-                             let evaluated = eval_d def (extend env x temp_val) in
+                             let new_env = extend env x temp_val in
+                             let evaluated = eval_d def (new_env) in
                              if evaluated = Val Unassigned then raise (EvalError "Invalid Letrec")
-                             else eval_d body (extend env x (ref evaluated))
+                             else temp_val := evaluated; eval_d body (new_env)
   | App (e1, e2) -> match eval_d e1 env with
                     | Val (Fun (v, e)) -> let v_e2 = eval_d e2 env in
                                           let new_env = extend env v (ref v_e2) in
@@ -181,8 +182,31 @@ let rec eval_d (exp : expr) (env : Env.env) : Env.value =
 (* The LEXICALLY-SCOPED ENVIRONMENT MODEL evaluator -- optionally
    completed as (part of) your extension *)
    
-let eval_l (_exp : expr) (_env : Env.env) : Env.value =
-  failwith "eval_l not implemented" ;;
+let rec eval_l (exp : expr) (env : Env.env) : Env.value =
+  match exp with
+  | Var v -> lookup env v
+  | Num _ | Bool _ | Raise | Unassigned -> Val (exp)
+  | Unop (op, e) -> (match eval_l e env with
+                     | Val (expr) -> Val (unopeval op expr)
+                     | _ -> raise (EvalError "Invalid Unary Operation"))
+  | Binop (op, e1, e2) ->  (match eval_l e1 env, eval_l e2 env with
+                            | Val (exp1), Val (exp2) -> Val (binopeval op exp1 exp2)
+                            | _, _ -> raise (EvalError "Invalid Binary Operation"))
+  | Conditional (e1, e2, e3) -> (match eval_l e1 env with
+                                 | Val (Bool b) -> if b then eval_l e2 env else eval_l e3 env
+                                 | _ -> raise (EvalError "Invalid Conditional"))
+  | Fun (v, e) -> Closure (exp, env)
+  | Let (x, def, body) -> eval_l body (extend env x (ref (eval_l def env)))
+  | Letrec (x, def, body) -> let temp_val = ref (Val Unassigned) in
+                             let new_env = extend env x temp_val in
+                             let evaluated = eval_l def (new_env) in
+                             if evaluated = Val Unassigned then raise (EvalError "Invalid Letrec")
+                             else temp_val := evaluated; eval_l body (new_env)
+  | App (e1, e2) -> match eval_l e1 env with
+                    | Closure (Fun (v, e), env1) -> let v_e2 = eval_l e2 env in
+                                                    let new_env = extend env1 v (ref v_e2) in
+                                                    eval_l e new_env
+                    | _ -> raise (EvalError "Invalid Application")
 
 (* The EXTENDED evaluator -- if you want, you can provide your
    extension as a separate evaluator, or if it is type- and
