@@ -55,7 +55,24 @@ let eval_s_tests() =
   assert (eval_s (App ((Fun ("x", Binop (Plus, Var("x"), Var("x")))), Num(5))) (Env.create()) = Env.Val (Num(10))) ;
   assert (eval_s (exp_10) (Env.create()) = Env.Val (Num(13))) ;;
 
+(* Env Module tests *)
+let env_mod_tests() =
+  let env = Env.create() in
+  let env = Env.extend env "x" (ref (Env.Val (Num (3)))) in
+  let env = Env.extend env "y" (ref (Env.Val (Num (5)))) in
+  assert (Env.lookup env "x" = Env.Val(Num (3))) ;
+  assert (Env.lookup env "y" = Env.Val(Num (5))) ;
+  assert (Env.env_to_string env = "{(y, 5); (x, 3)}") ;
+  let env = Env.extend env "y" (ref (Env.Val (Bool (true)))) in
+  assert (Env.lookup env "y" = Env.Val(Bool (true))) ;
+  assert (Env.env_to_string env = "{(y, true); (x, 3)}") ;
+  let closure = Env.close (exp_1) (env) in
+  assert (Env.value_to_string closure = "[Expr: let x = 3 in let y = x in f (x (y)), Env: {(y, true); (x, 3)}]") ;
+  let closure2 = Env.close (exp_2) (env) in
+  assert (Env.value_to_string closure2 = "[Expr: let x = 30 in let x = let x = 3 in x * 10 in x + x, Env: {(y, true); (x, 3)}]") ;;
+
 let _ =
   free_vars_tests() ;
   subst_tests() ;
-  eval_s_tests() ;;
+  eval_s_tests() ;
+  env_mod_tests() ;;

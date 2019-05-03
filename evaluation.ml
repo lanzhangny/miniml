@@ -50,7 +50,7 @@ module Env : Env_type =
     (* Looks up the value of a variable in the environment *)
     let lookup (env : env) (varname : varid) : value =
       try !(List.assoc varname env) 
-      with Not_found -> raise (EvalError "Variable DNE")
+      with Not_found -> raise (EvalError "Unbound Variable")
 
     (* Returns a new environment just like env except that it maps the
        variable varid to loc *)
@@ -63,16 +63,21 @@ module Env : Env_type =
     let rec value_to_string ?(printenvp : bool = true) (v : value) : string =
       match v with
       | Val e -> exp_to_concrete_string e
-      (* PICK UP HERE!! *)
-      | Closure (e, env) -> if printenvp then "[Expr:" ^ 
+      | Closure (e, env) -> if printenvp then "[Expr: " ^ 
                                (exp_to_concrete_string e) ^ ", " ^ 
-                               "Env:" ^ "{" ^ (List.fold_right (^) 
-                               	  (List.map (fun (var, valref) -> "(" ^ var ^ ", " ^ (value_to_string !valref) ^ "); ") env) "") ^ "}]"
-                             else exp_to_concrete_string e ;;
+                               "Env: " ^ (env_to_string env) ^ "]"
+                             else exp_to_concrete_string e
 
     (* Returns a printable string representation of an environment *)
-    let env_to_string (env : env) : string =
-      "{" ^ (List.fold_right (^) (List.map (fun (var, valref) -> "(" ^ var ^ ", " ^ (value_to_string !valref) ^ "); ") env) "") ^ "}" ;;
+    and env_to_string (env : env) : string =
+      "{" ^
+      let rec env_string_helper (env : env) : string =
+      (match env with
+      | [] -> ""
+      | hd :: tl -> let (var, valref) = hd in 
+                    "(" ^ var ^ ", " ^ (value_to_string !valref) ^ ")" ^
+                      (if (List.length tl) >= 1 then "; " else "") ^ env_string_helper tl) in
+      env_string_helper env ^ "}" ;;
   end
 ;;
 
@@ -104,24 +109,35 @@ let eval_t (exp : expr) (_env : Env.env) : Env.value =
   (* coerce the expr, unchanged, into a value *)
   Env.Val exp ;;
 
+open Env ;;
+
 (* The SUBSTITUTION MODEL evaluator -- to be completed *)
+let binopeval (op : binop) (e1 : expr) (e2 : expr) : expr =
+  match op, e1, e2 with
+  | Plus, Num x, Num y -> Num (x + y)
+  | Plus, _, _ -> raise (EvalError "Invalid Addition Operation")
+  | Minus, Num x, Num y -> Num (x - y)
+  | Minus, _, _ -> raise (EvalError "Invalid Subtraction Operation")
+  | Times, Num x, Num y -> Num (x * y)
+  | Times, _, _ -> raise (EvalError "Invalid Multiplication Operation")
+  | Equals, Num x, Num y -> Bool (x = y)
+  | LessThan, Num x, Num y -> Bool (x < y)
+  | LessThan, _, _ -> raise (EvalError "Invalid LessThan Operation")
+  | Equals, Bool x, Bool y -> Bool (x = y)
+  | Equals, _, _ -> raise (EvalError "Invalid Equality Operation") ;;
+
+let unopeval (op : unop) (e : expr) : expr =
+  match op, e with
+  | Negate, Num x -> Num (~-x)
+  | Negate, _ -> raise (EvalError "Invalid Negation Operation")
    
 let eval_s (exp : expr) (_env : Env.env) : Env.value =
   let rec eval_helper (exp : expr) : expr =
   match exp with
   | Var _ -> raise (EvalError "Unbound Variable")
   | Num _ | Bool _ | Fun (_, _)| Raise | Unassigned -> exp
-  | Unop (op, arg) -> (match op, eval_helper arg with
-  	                   | Negate, Num x -> Num (~-x)
-  	                   | _, _ -> raise (EvalError "Invalid Unary Operation"))
-  | Binop (op, e1, e2) -> (match op, eval_helper e1, eval_helper e2 with
-                           | Plus, Num x, Num y -> Num (x + y)
-                           | Minus, Num x, Num y -> Num (x - y)
-                           | Times, Num x, Num y -> Num (x * y)
-                           | Equals, Num x, Num y -> Bool (x = y)
-                           | LessThan, Num x, Num y -> Bool (x < y)
-                           | Equals, Bool x, Bool y -> Bool (x && y)
-                           | _, _, _ -> raise (EvalError "Invalid Binary Operation"))
+  | Unop (op, e) -> unopeval op (eval_helper e)
+  | Binop (op, e1, e2) -> binopeval op (eval_helper e1) (eval_helper e2)
   | Conditional (e1, e2, e3) -> (match eval_helper e1 with
                                  | Bool b -> if b then eval_helper e2 else eval_helper e3
                                  | _ -> raise (EvalError "Invalid Conditional Statement"))
@@ -130,14 +146,38 @@ let eval_s (exp : expr) (_env : Env.env) : Env.value =
   | App (e1, e2) -> (match eval_helper e1 with
                      | Fun (x, e) -> eval_helper (subst x (eval_helper e2) e)
                      | _ -> raise (EvalError "Invalid Application")) in
-  Env.Val (eval_helper exp) ;;
+  Val (eval_helper exp) ;;
      
 (* The DYNAMICALLY-SCOPED ENVIRONMENT MODEL evaluator -- to be
    completed *)
    
-let eval_d (_exp : expr) (_env : Env.env) : Env.value =
-  failwith "eval_d not implemented" ;;
-       
+let rec eval_d (exp : expr) (env : Env.env) : Env.value =
+  match exp with
+  | Var v -> lookup env v
+  | Num _ | Bool _ | Raise | Unassigned -> Val (exp)
+  | Unop (op, e) -> (match eval_d e env with
+                     | Val (expr) -> Val (unopeval op expr)
+                     | _ -> raise (EvalError "Invalid Unary Operation"))
+  | Binop (op, e1, e2) ->  (match eval_d e1 env, eval_d e2 env with
+                            | Val (exp1), Val (exp2) -> Val (binopeval op exp1 exp2)
+                            | _, _ -> raise (EvalError "Invalid Binary Operation"))
+  | Conditional (e1, e2, e3) -> (match eval_d e1 env with
+                                 | Val (Bool b) -> if b then eval_d e2 env else eval_d e3 env
+                                 | _ -> raise (EvalError "Invalid Conditional"))
+  | Fun (v, e) -> Val (exp)
+  | Let (x, def, body) -> (match eval_d def env with
+                           | Val (definition) -> eval_d body (extend env x (ref (Val (definition))))
+                           | _ -> raise (EvalError "Invalid Let"))
+  | Letrec (x, def, body) -> let temp_val = ref (Val Unassigned) in
+                             let evaluated = eval_d def (extend env x temp_val) in
+                             if evaluated = Val Unassigned then raise (EvalError "Invalid Letrec")
+                             else eval_d body (extend env x (ref evaluated))
+  | App (e1, e2) -> match eval_d e1 env with
+                    | Val (Fun (v, e)) -> let v_e2 = eval_d e2 env in
+                                          let new_env = extend env v (ref v_e2) in
+                                          eval_d e new_env
+                    | _ -> raise (EvalError "Invalid Application")
+  
 (* The LEXICALLY-SCOPED ENVIRONMENT MODEL evaluator -- optionally
    completed as (part of) your extension *)
    
@@ -160,4 +200,4 @@ let eval_e _ =
    above, not the evaluate function, so it doesn't matter how it's set
    when you submit your solution.) *)
    
-let evaluate = eval_s ;;
+let evaluate = eval_d ;;
