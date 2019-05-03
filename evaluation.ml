@@ -115,27 +115,39 @@ open Env ;;
 let binopeval (op : binop) (e1 : expr) (e2 : expr) : expr =
   match op, e1, e2 with
   | Plus, Num x, Num y -> Num (x + y)
-  | Plus, _, _ -> raise (EvalError "Invalid Addition Operation")
+  | Plus_f, Float x, Float y -> Float (x +. y)
+  | Plus, _, _ | Plus_f, _, _ -> raise (EvalError "Invalid Addition Operation")
   | Minus, Num x, Num y -> Num (x - y)
-  | Minus, _, _ -> raise (EvalError "Invalid Subtraction Operation")
+  | Minus_f, Float x, Float y -> Float (x -. y)
+  | Minus, _, _ | Minus_f, _, _ -> raise (EvalError "Invalid Subtraction Operation")
   | Times, Num x, Num y -> Num (x * y)
-  | Times, _, _ -> raise (EvalError "Invalid Multiplication Operation")
+  | Times_f, Float x, Float y -> Float (x *. y)
+  | Times, _, _ | Times_f, _, _ -> raise (EvalError "Invalid Multiplication Operation")
+  | Divide, Num x, Num y -> if y = 0 then raise (EvalError "Div by Zero") else Num (x / y)
+  | Divide_f, Float x, Float y -> if y = 0. then raise (EvalError "Div by Zero") else Float (x /. y)
+  | Divide, _, _ | Divide_f, _, _ -> raise (EvalError "Invalid Division Operation")
   | Equals, Num x, Num y -> Bool (x = y)
-  | LessThan, Num x, Num y -> Bool (x < y)
-  | LessThan, _, _ -> raise (EvalError "Invalid LessThan Operation")
+  | Equals, Float x, Float y -> Bool (x = y)
   | Equals, Bool x, Bool y -> Bool (x = y)
-  | Equals, _, _ -> raise (EvalError "Invalid Equality Operation") ;;
+  | Equals, _, _ -> raise (EvalError "Invalid Equality Operation")
+  | LessThan, Num x, Num y -> Bool (x < y)
+  | LessThan, Float x, Float y -> Bool (x < y)
+  | LessThan, _, _ -> raise (EvalError "Invalid LessThan Operation")
+  | GreaterThan, Num x, Num y -> Bool (x > y)
+  | GreaterThan, Float x, Float y -> Bool (x > y)
+  | GreaterThan, _, _ -> raise (EvalError "Invalid GreaterThan Operation")
 
 let unopeval (op : unop) (e : expr) : expr =
   match op, e with
   | Negate, Num x -> Num (~-x)
-  | Negate, _ -> raise (EvalError "Invalid Negation Operation")
+  | Negate_f, Float x -> Float (~-. x)
+  | Negate, _ | Negate_f, _ -> raise (EvalError "Invalid Negation Operation")
    
 let eval_s (exp : expr) (_env : Env.env) : Env.value =
   let rec eval_helper (exp : expr) : expr =
   match exp with
   | Var _ -> raise (EvalError "Unbound Variable")
-  | Num _ | Bool _ | Fun (_, _)| Raise | Unassigned -> exp
+  | Num _ | Float _ | Bool _ | Fun (_, _)| Raise | Unassigned -> exp
   | Unop (op, e) -> unopeval op (eval_helper e)
   | Binop (op, e1, e2) -> binopeval op (eval_helper e1) (eval_helper e2)
   | Conditional (e1, e2, e3) -> (match eval_helper e1 with
@@ -154,7 +166,7 @@ let eval_s (exp : expr) (_env : Env.env) : Env.value =
 let rec eval_d (exp : expr) (env : Env.env) : Env.value =
   match exp with
   | Var v -> lookup env v
-  | Num _ | Bool _ | Raise | Unassigned -> Val (exp)
+  | Num _ | Float _ | Bool _ | Raise | Unassigned -> Val (exp)
   | Unop (op, e) -> (match eval_d e env with
                      | Val (expr) -> Val (unopeval op expr)
                      | _ -> raise (EvalError "Invalid Unary Operation"))
@@ -164,7 +176,7 @@ let rec eval_d (exp : expr) (env : Env.env) : Env.value =
   | Conditional (e1, e2, e3) -> (match eval_d e1 env with
                                  | Val (Bool b) -> if b then eval_d e2 env else eval_d e3 env
                                  | _ -> raise (EvalError "Invalid Conditional"))
-  | Fun (v, e) -> Val (exp)
+  | Fun (_v, _e) -> Val (exp)
   | Let (x, def, body) -> (match eval_d def env with
                            | Val (definition) -> eval_d body (extend env x (ref (Val (definition))))
                            | _ -> raise (EvalError "Invalid Let"))
@@ -185,7 +197,7 @@ let rec eval_d (exp : expr) (env : Env.env) : Env.value =
 let rec eval_l (exp : expr) (env : Env.env) : Env.value =
   match exp with
   | Var v -> lookup env v
-  | Num _ | Bool _ | Raise | Unassigned -> Val (exp)
+  | Num _ | Bool _ | Float _ | Raise | Unassigned -> Val (exp)
   | Unop (op, e) -> (match eval_l e env with
                      | Val (expr) -> Val (unopeval op expr)
                      | _ -> raise (EvalError "Invalid Unary Operation"))
@@ -195,7 +207,7 @@ let rec eval_l (exp : expr) (env : Env.env) : Env.value =
   | Conditional (e1, e2, e3) -> (match eval_l e1 env with
                                  | Val (Bool b) -> if b then eval_l e2 env else eval_l e3 env
                                  | _ -> raise (EvalError "Invalid Conditional"))
-  | Fun (v, e) -> Closure (exp, env)
+  | Fun (_v, _e) -> Closure (exp, env)
   | Let (x, def, body) -> eval_l body (extend env x (ref (eval_l def env)))
   | Letrec (x, def, body) -> let temp_val = ref (Val Unassigned) in
                              let new_env = extend env x temp_val in

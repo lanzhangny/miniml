@@ -9,14 +9,21 @@
 
 type unop =
   | Negate
+  | Negate_f
 ;;
     
 type binop =
   | Plus
+  | Plus_f
   | Minus
+  | Minus_f
   | Times
+  | Times_f
+  | Divide
+  | Divide_f
   | Equals
   | LessThan
+  | GreaterThan
 ;;
 
 type varid = string ;;
@@ -24,6 +31,7 @@ type varid = string ;;
 type expr =
   | Var of varid                         (* variables *)
   | Num of int                           (* integers *)
+  | Float of float                       (* floats *)
   | Bool of bool                         (* booleans *)
   | Unop of unop * expr                  (* unary operators *)
   | Binop of binop * expr * expr         (* binary operators *)
@@ -66,7 +74,7 @@ let vars_of_list : string list -> varidset =
 let rec free_vars (exp : expr) : varidset =
   match exp with
   | Var (x) -> SS.singleton x
-  | Num _ | Bool _ | Raise | Unassigned -> SS.empty
+  | Num _ | Float _ | Bool _ | Raise | Unassigned -> SS.empty
   | Unop (_, arg) -> free_vars arg
   | Binop (_, arg1, arg2) -> SS.union (free_vars arg1) (free_vars arg2)
   | Conditional (e1, e2, e3) -> SS.union (free_vars e1) 
@@ -101,7 +109,7 @@ let rec subst (var_name : varid) (repl : expr) (exp : expr) : expr =
 (*   failwith "subst not implemented" ;; *)
   match exp with
   | Var x -> if x = var_name then repl else exp
-  | Num _ | Bool _ | Raise | Unassigned -> exp
+  | Num _ | Float _ | Bool _ | Raise | Unassigned -> exp
 
   | Unop (op, arg) -> Unop (op, subst var_name repl arg)
   | Binop (op, arg1, arg2) -> Binop (op, subst var_name repl arg1, subst var_name repl arg2)
@@ -135,15 +143,22 @@ let rec exp_to_concrete_string (exp : expr) : string =
   match exp with
   | Var (v) -> v
   | Num (i) -> string_of_int i
+  | Float (f) -> string_of_float f
   | Bool (b) -> string_of_bool b
   | Unop (_op, e) -> "~- " ^ (exp_to_concrete_string e)
   | Binop (op, e1, e2) -> (exp_to_concrete_string e1) ^
                          (match op with
                           | Plus -> " + "
+                          | Plus_f -> " +. "
                           | Minus -> " - "
+                          | Minus_f -> " -. "
                           | Times -> " * "
+                          | Times_f -> " *. "
+                          | Divide -> " / "
+                          | Divide_f -> " /. "
                           | Equals -> " = "
                           | LessThan -> " < "
+                          | GreaterThan -> " > "
                           ) ^ (exp_to_concrete_string e2)
   | Conditional (e1, e2, e3) -> "if " ^ (exp_to_concrete_string e1) ^
                                 " then " ^ (exp_to_concrete_string e2) ^
@@ -162,26 +177,33 @@ let rec exp_to_concrete_string (exp : expr) : string =
    Returns a string representation of the abstract syntax of the expr *)
 let rec exp_to_abstract_string (exp : expr) : string =
   match exp with
-  | Var (v) -> "Var(" ^ v ^ ")"
-  | Num (i) -> "Num(" ^ (string_of_int i) ^ ")"
-  | Bool (b) -> "Bool(" ^ (string_of_bool b) ^ ")"
-  | Unop (_op, e) -> "Unop(" ^ "Negate" ^ ", " ^ (exp_to_abstract_string e) ^ ")"
-  | Binop (op, e1, e2) -> "Binop(" ^ (match op with
+  | Var (v) -> "Var (" ^ v ^ ")"
+  | Num (i) -> "Num (" ^ (string_of_int i) ^ ")"
+  | Float (f) -> "Float (" ^ (string_of_float f) ^ ")"
+  | Bool (b) -> "Bool (" ^ (string_of_bool b) ^ ")"
+  | Unop (_op, e) -> "Unop (" ^ "Negate" ^ ", " ^ (exp_to_abstract_string e) ^ ")"
+  | Binop (op, e1, e2) -> "Binop (" ^ (match op with
                                      | Plus -> "Plus"
+                                     | Plus_f -> "Plus_f"
                                      | Minus -> "Minus"
+                                     | Minus_f -> "Minus_f"
                                      | Times -> "Times"
+                                     | Times_f -> "Times_f"
+                                     | Divide -> "Divide"
+                                     | Divide_f -> "Divide_f"
                                      | Equals -> "Equals"
-                                     | LessThan -> "LessThan") ^ ", " ^
+                                     | LessThan -> "LessThan"
+                                     | GreaterThan -> "GreaterThan") ^ ", " ^
                           (exp_to_abstract_string e1) ^ ", " ^ 
-                          (exp_to_abstract_string e2) ^ ")"
-  | Conditional (e1, e2, e3) -> "Conditional(" ^ (exp_to_abstract_string e1) ^ ", " ^
+                         (exp_to_abstract_string e2) ^ ")"
+  | Conditional (e1, e2, e3) -> "Conditional (" ^ (exp_to_abstract_string e1) ^ ", " ^
                                 (exp_to_abstract_string e2) ^ ", " ^ 
                                 (exp_to_abstract_string e3) ^ ")"
-  | Fun (v, e) -> "Fun(" ^ v ^ ", " ^ (exp_to_abstract_string e) ^ ")"
-  | Let (v, def, body) -> "Let(" ^ v ^ ", " ^ (exp_to_abstract_string def) ^
+  | Fun (v, e) -> "Fun (" ^ v ^ ", " ^ (exp_to_abstract_string e) ^ ")"
+  | Let (v, def, body) -> "Let (" ^ v ^ ", " ^ (exp_to_abstract_string def) ^
                        ", " ^ (exp_to_abstract_string body) ^ ")"
-  | Letrec (v, def, body) -> "Letrec(" ^ v ^ ", " ^ (exp_to_abstract_string def) ^
+  | Letrec (v, def, body) -> "Letrec (" ^ v ^ ", " ^ (exp_to_abstract_string def) ^
                        ", " ^ (exp_to_abstract_string body) ^ ")"
   | Raise -> "Raise"
   | Unassigned -> "Unassigned"
-  | App (e1, e2) -> "App(" ^ (exp_to_abstract_string e1) ^ ", " ^ (exp_to_abstract_string e2) ^ ")";;
+  | App (e1, e2) -> "App (" ^ (exp_to_abstract_string e1) ^ ", " ^ (exp_to_abstract_string e2) ^ ")";;
