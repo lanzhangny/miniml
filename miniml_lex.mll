@@ -33,26 +33,39 @@
     create_hashtable 8 [
                        ("=", EQUALS);
                        ("<", LESSTHAN);
+                       (">", GREATERTHAN);
                        (".", DOT);
                        ("->", DOT);
                        (";;", EOF);
                        ("~-", NEG);
+                       ("~-.", NEG_F);
                        ("+", PLUS);
+                       ("+.", PLUS_F);
                        ("-", MINUS);
+                       ("-.", MINUS_F);
                        ("*", TIMES);
+                       ("*.", TIMES_F);
+                       ("/", DIVIDE);
+                       ("/.", DIVIDE_F);
                        ("(", OPEN);
                        (")", CLOSE)
                      ]
 }
 
 let digit = ['0'-'9']
+let frac = "." digit*
+let float = digit* frac? 
 let id = ['a'-'z'] ['a'-'z' '0'-'9']*
-let sym = ['(' ')'] | (['+' '-' '*' '.' '=' '~' ';' '<' '>']+)
+let sym = ['(' ')'] | (['+' '-' '*' '.' '=' '~' ';' '<' '>' '/']+)
 
 rule token = parse
   | digit+ as inum
         { let num = int_of_string inum in
           INT num
+        }
+  | float as fnum
+        { let num = float_of_string fnum in
+          FLOAT num
         }
   | id as word
         { try
