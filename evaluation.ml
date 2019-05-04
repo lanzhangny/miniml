@@ -66,7 +66,7 @@ module Env : Env_type =
       | Closure (e, env) -> if printenvp then "[Expr: " ^ 
                                (exp_to_concrete_string e) ^ ", " ^ 
                                "Env: " ^ (env_to_string env) ^ "]"
-                             else exp_to_concrete_string e
+                            else exp_to_concrete_string e
 
     (* Returns a printable string representation of an environment *)
     and env_to_string (env : env) : string =
@@ -236,4 +236,4 @@ let eval_e _ =
    above, not the evaluate function, so it doesn't matter how it's set
    when you submit your solution.) *)
    
-let evaluate = eval_d ;;
+let evaluate = eval_l ;;

@@ -145,7 +145,9 @@ let rec exp_to_concrete_string (exp : expr) : string =
   | Num (i) -> string_of_int i
   | Float (f) -> string_of_float f
   | Bool (b) -> string_of_bool b
-  | Unop (_op, e) -> "~- " ^ (exp_to_concrete_string e)
+  | Unop (op, e) -> (match op with
+                     | Negate -> "~- "
+                     | Negate_f -> "~-. ") ^ (exp_to_concrete_string e)
   | Binop (op, e1, e2) -> (exp_to_concrete_string e1) ^
                          (match op with
                           | Plus -> " + "
@@ -181,7 +183,9 @@ let rec exp_to_abstract_string (exp : expr) : string =
   | Num (i) -> "Num (" ^ (string_of_int i) ^ ")"
   | Float (f) -> "Float (" ^ (string_of_float f) ^ ")"
   | Bool (b) -> "Bool (" ^ (string_of_bool b) ^ ")"
-  | Unop (_op, e) -> "Unop (" ^ "Negate" ^ ", " ^ (exp_to_abstract_string e) ^ ")"
+  | Unop (op, e) -> "Unop (" ^ (match op with
+                                 | Negate -> "Negate"
+                                 | Negate_f -> "Negate_f") ^ ", " ^ (exp_to_abstract_string e) ^ ")"
   | Binop (op, e1, e2) -> "Binop (" ^ (match op with
                                      | Plus -> "Plus"
                                      | Plus_f -> "Plus_f"
