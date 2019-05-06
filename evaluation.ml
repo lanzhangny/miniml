@@ -76,7 +76,8 @@ module Env : Env_type =
       | [] -> ""
       | hd :: tl -> let (var, valref) = hd in 
                     "(" ^ var ^ ", " ^ (value_to_string !valref) ^ ")" ^
-                      (if (List.length tl) >= 1 then "; " else "") ^ env_string_helper tl) in
+                      (if (List.length tl) >= 1 then "; " 
+                       else "") ^ env_string_helper tl) in
       env_string_helper env ^ "}" ;;
   end
 ;;
@@ -116,32 +117,34 @@ let binopeval (op : binop) (e1 : expr) (e2 : expr) : expr =
   match op, e1, e2 with
   | Plus, Num x, Num y -> Num (x + y)
   | Plus_f, Float x, Float y -> Float (x +. y)
-  | Plus, _, _ | Plus_f, _, _ -> raise (EvalError "Invalid Addition Operation")
+  | Plus, _, _ | Plus_f, _, _ -> raise (EvalError "Invalid Addition")
   | Minus, Num x, Num y -> Num (x - y)
   | Minus_f, Float x, Float y -> Float (x -. y)
-  | Minus, _, _ | Minus_f, _, _ -> raise (EvalError "Invalid Subtraction Operation")
+  | Minus, _, _ | Minus_f, _, _ -> raise (EvalError "Invalid Subtraction")
   | Times, Num x, Num y -> Num (x * y)
   | Times_f, Float x, Float y -> Float (x *. y)
-  | Times, _, _ | Times_f, _, _ -> raise (EvalError "Invalid Multiplication Operation")
-  | Divide, Num x, Num y -> if y = 0 then raise (EvalError "Div by Zero") else Num (x / y)
-  | Divide_f, Float x, Float y -> if y = 0. then raise (EvalError "Div by Zero") else Float (x /. y)
-  | Divide, _, _ | Divide_f, _, _ -> raise (EvalError "Invalid Division Operation")
+  | Times, _, _ | Times_f, _, _ -> raise (EvalError "Invalid Multiplication")
+  | Divide, Num x, Num y -> if y = 0 then raise (EvalError "Div by Zero") 
+                            else Num (x / y)
+  | Divide_f, Float x, Float y -> if y = 0. then raise (EvalError "Div by Zero")
+                                  else Float (x /. y)
+  | Divide, _, _ | Divide_f, _, _ -> raise (EvalError "Invalid Division")
   | Equals, Num x, Num y -> Bool (x = y)
   | Equals, Float x, Float y -> Bool (x = y)
   | Equals, Bool x, Bool y -> Bool (x = y)
-  | Equals, _, _ -> raise (EvalError "Invalid Equality Operation")
+  | Equals, _, _ -> raise (EvalError "Invalid Equality")
   | LessThan, Num x, Num y -> Bool (x < y)
   | LessThan, Float x, Float y -> Bool (x < y)
-  | LessThan, _, _ -> raise (EvalError "Invalid LessThan Operation")
+  | LessThan, _, _ -> raise (EvalError "Invalid LessThan")
   | GreaterThan, Num x, Num y -> Bool (x > y)
   | GreaterThan, Float x, Float y -> Bool (x > y)
-  | GreaterThan, _, _ -> raise (EvalError "Invalid GreaterThan Operation")
+  | GreaterThan, _, _ -> raise (EvalError "Invalid GreaterThan")
 
 let unopeval (op : unop) (e : expr) : expr =
   match op, e with
   | Negate, Num x -> Num (~-x)
   | Negate_f, Float x -> Float (~-. x)
-  | Negate, _ | Negate_f, _ -> raise (EvalError "Invalid Negation Operation")
+  | Negate, _ | Negate_f, _ -> raise (EvalError "Invalid Negation")
    
 let eval_s (exp : expr) (_env : Env.env) : Env.value =
   let rec eval_helper (exp : expr) : expr =
@@ -151,20 +154,67 @@ let eval_s (exp : expr) (_env : Env.env) : Env.value =
   | Unop (op, e) -> unopeval op (eval_helper e)
   | Binop (op, e1, e2) -> binopeval op (eval_helper e1) (eval_helper e2)
   | Conditional (e1, e2, e3) -> (match eval_helper e1 with
-                                 | Bool b -> if b then eval_helper e2 else eval_helper e3
-                                 | _ -> raise (EvalError "Invalid Conditional Statement"))
+                                 | Bool b -> if b then eval_helper e2 
+                                             else eval_helper e3
+                                 | _ -> raise (EvalError "Invalid Conditional"))
   | Let (x, def, body) -> eval_helper (subst x (eval_helper def) body)
-  | Letrec (x, def, body) -> eval_helper (subst x (subst x (Letrec (x, (eval_helper def), Var(x))) (eval_helper def)) body)
+  | Letrec (x, def, body) -> eval_helper (subst x (subst x 
+                               (Letrec (x, (eval_helper def), Var(x))) 
+                                 (eval_helper def)) body)
   | App (e1, e2) -> (match eval_helper e1 with
                      | Fun (x, e) -> eval_helper (subst x (eval_helper e2) e)
-                     | _ -> raise (EvalError "Invalid Application")) in
+                     | _ -> raise (EvalError "Invalid App")) in
   Val (eval_helper exp) ;;
      
+let eval_both (dyn_eval : bool) (exp : expr) (env : Env.env) : Env.value =
+  let rec eval_helper (exp : expr) (env : Env.env) : Env.value =
+    match exp with
+    | Var v -> lookup env v
+    | Num _ | Float _ | Bool _ | Raise | Unassigned -> Val (exp)
+    | Unop (op, e) -> (match eval_helper e env with
+                       | Val expr -> Val (unopeval op expr)
+                       | _ -> raise (EvalError "Invalid Unop"))
+    | Binop (op, e1, e2) ->  (match eval_helper e1 env, eval_helper e2 env with
+                              | Val x, Val y -> Val (binopeval op x y)
+                              | _, _ -> raise (EvalError "Invalid Binop"))
+    | Conditional (e1, e2, e3) -> (match eval_helper e1 env with
+                                   | Val (Bool b) -> if b then 
+                                                       eval_helper e2 env 
+                                                     else eval_helper e3 env
+                                   | _ -> raise 
+                                            (EvalError "Invalid Conditional"))
+    | Fun (_v, _e) -> if dyn_eval then Val (exp) else Closure (exp, env)
+    | Let (x, def, body) -> eval_helper body 
+                              (extend env x (ref (eval_helper def env)))
+    | Letrec (x, def, body) -> let temp_val = ref (Val Unassigned) in
+                               let new_env = extend env x temp_val in
+                               let evaluated = eval_helper def (new_env) in
+                               if evaluated = Val Unassigned then
+                                 raise (EvalError "Invalid Letrec")
+                               else temp_val := evaluated;
+                               eval_helper body (new_env)
+    | App (e1, e2) -> (match eval_helper e1 env with
+                       | Val (Fun (v, e)) -> if dyn_eval then 
+                                               let v_e2 = eval_helper e2 env in
+                                               let new_env = extend env v 
+                                                 (ref v_e2) in
+                                               eval_helper e new_env
+                                             else raise (EvalError "Invalid App")
+                       | Closure (Fun (v, e), env1) -> if (not dyn_eval) then 
+                                                         let v_e2 = eval_helper e2 env in
+                                                         let new_env = extend env1 v (ref v_e2) in
+                                                         eval_helper e new_env
+                                                       else raise (EvalError "Invalid App")
+                       | _ -> raise (EvalError "Invalid App"))
+  in eval_helper exp env ;;
+
+
 (* The DYNAMICALLY-SCOPED ENVIRONMENT MODEL evaluator -- to be
    completed *)
    
-let rec eval_d (exp : expr) (env : Env.env) : Env.value =
-  match exp with
+let eval_d (exp : expr) (env : Env.env) : Env.value =
+  eval_both true exp env ;;
+(*   match exp with
   | Var v -> lookup env v
   | Num _ | Float _ | Bool _ | Raise | Unassigned -> Val (exp)
   | Unop (op, e) -> (match eval_d e env with
@@ -177,9 +227,7 @@ let rec eval_d (exp : expr) (env : Env.env) : Env.value =
                                  | Val (Bool b) -> if b then eval_d e2 env else eval_d e3 env
                                  | _ -> raise (EvalError "Invalid Conditional"))
   | Fun (_v, _e) -> Val (exp)
-  | Let (x, def, body) -> (match eval_d def env with
-                           | Val (definition) -> eval_d body (extend env x (ref (Val (definition))))
-                           | _ -> raise (EvalError "Invalid Let"))
+  | Let (x, def, body) -> eval_d body (extend env x (ref (eval_d def env)))
   | Letrec (x, def, body) -> let temp_val = ref (Val Unassigned) in
                              let new_env = extend env x temp_val in
                              let evaluated = eval_d def (new_env) in
@@ -189,13 +237,14 @@ let rec eval_d (exp : expr) (env : Env.env) : Env.value =
                     | Val (Fun (v, e)) -> let v_e2 = eval_d e2 env in
                                           let new_env = extend env v (ref v_e2) in
                                           eval_d e new_env
-                    | _ -> raise (EvalError "Invalid Application")
+                    | _ -> raise (EvalError "Invalid Application") *)
   
 (* The LEXICALLY-SCOPED ENVIRONMENT MODEL evaluator -- optionally
    completed as (part of) your extension *)
    
-let rec eval_l (exp : expr) (env : Env.env) : Env.value =
-  match exp with
+let eval_l (exp : expr) (env : Env.env) : Env.value =
+  eval_both false exp env ;;
+(*   match exp with
   | Var v -> lookup env v
   | Num _ | Bool _ | Float _ | Raise | Unassigned -> Val (exp)
   | Unop (op, e) -> (match eval_l e env with
@@ -218,7 +267,7 @@ let rec eval_l (exp : expr) (env : Env.env) : Env.value =
                     | Closure (Fun (v, e), env1) -> let v_e2 = eval_l e2 env in
                                                     let new_env = extend env1 v (ref v_e2) in
                                                     eval_l e new_env
-                    | _ -> raise (EvalError "Invalid Application")
+                    | _ -> raise (EvalError "Invalid Application") *)
 
 (* The EXTENDED evaluator -- if you want, you can provide your
    extension as a separate evaluator, or if it is type- and
@@ -236,4 +285,4 @@ let eval_e _ =
    above, not the evaluate function, so it doesn't matter how it's set
    when you submit your solution.) *)
    
-let evaluate = eval_l ;;
+let evaluate = eval_d ;;

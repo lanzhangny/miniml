@@ -64,8 +64,8 @@ rule token = parse
           INT num
         }
   | float as fnum
-        { let num = float_of_string fnum in
-          FLOAT num
+        { let fl = float_of_string fnum in
+          FLOAT fl
         }
   | id as word
         { try
