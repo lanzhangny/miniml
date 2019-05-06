@@ -75,13 +75,15 @@ let rec free_vars (exp : expr) : varidset =
   match exp with
   | Var x -> SS.singleton x
   | Num _ | Float _ | Bool _ | Raise | Unassigned -> SS.empty
-  | Unop (_, arg) -> free_vars arg
-  | Binop (_, arg1, arg2) -> SS.union (free_vars arg1) (free_vars arg2)
+  | Unop (_, e) -> free_vars e
+  | Binop (_, e1, e2) -> SS.union (free_vars e1) (free_vars e2)
   | Conditional (e1, e2, e3) -> SS.union (free_vars e1) 
-                                (SS.union (free_vars e2) (free_vars e3))
+                                  (SS.union (free_vars e2) (free_vars e3))
   | Fun (x, e) -> SS.remove x (free_vars e)
-  | Let (x, def, body) -> SS.union (free_vars def) (SS.remove x (free_vars body))
-  | Letrec (x, def, body) -> SS.remove x (SS.union (free_vars def) (free_vars body))
+  | Let (x, def, body) -> SS.union (free_vars def) 
+                            (SS.remove x (free_vars body))
+  | Letrec (x, def, body) -> SS.remove x 
+                               (SS.union (free_vars def) (free_vars body))
   | App (e1, e2) -> SS.union (free_vars e1) (free_vars e2) ;;
 
 (* new_varname : unit -> varid
@@ -126,7 +128,8 @@ let rec subst (var_name : varid) (repl : expr) (exp : expr) : expr =
       if x = var_name then Let (x, subst var_name repl def, body)
       else if SS.mem x (free_vars repl) then
         let z = new_varname() in
-        Let (z, subst var_name repl def, subst var_name repl (subst x (Var z) body))
+        Let (z, subst var_name repl def, 
+          subst var_name repl (subst x (Var z) body))
       else Let (x, subst var_name repl def, subst var_name repl body)
   | Letrec (x, def, body) ->
       if x = var_name then exp
@@ -168,7 +171,8 @@ let rec exp_to_concrete_string (exp : expr) : string =
   | Fun (v, e) -> "fun " ^ v ^ " -> " ^ (exp_to_concrete_string e)
   | Let (v, def, body) -> "let " ^ v ^ " = " ^ (exp_to_concrete_string def) ^
                           " in " ^ (exp_to_concrete_string body)
-  | Letrec (v, def, body) -> "let rec " ^ v ^ " = " ^ (exp_to_concrete_string def) ^
+  | Letrec (v, def, body) -> "let rec " ^ v ^ " = " ^ 
+                             (exp_to_concrete_string def) ^
                              " in " ^ (exp_to_concrete_string body)
   | Raise -> "Raise"
   | Unassigned -> "Unassigned"
@@ -201,14 +205,16 @@ let rec exp_to_abstract_string (exp : expr) : string =
                                      | GreaterThan -> "GreaterThan") ^ ", " ^
                           (exp_to_abstract_string e1) ^ ", " ^ 
                           (exp_to_abstract_string e2) ^ ")"
-  | Conditional (e1, e2, e3) -> "Conditional (" ^ (exp_to_abstract_string e1) ^ ", " ^
+  | Conditional (e1, e2, e3) -> "Conditional (" ^ 
+                                (exp_to_abstract_string e1) ^ ", " ^
                                 (exp_to_abstract_string e2) ^ ", " ^ 
                                 (exp_to_abstract_string e3) ^ ")"
   | Fun (v, e) -> "Fun (" ^ v ^ ", " ^ (exp_to_abstract_string e) ^ ")"
   | Let (v, def, body) -> "Let (" ^ v ^ ", " ^ (exp_to_abstract_string def) ^
                           ", " ^ (exp_to_abstract_string body) ^ ")"
-  | Letrec (v, def, body) -> "Letrec (" ^ v ^ ", " ^ (exp_to_abstract_string def) ^
-                             ", " ^ (exp_to_abstract_string body) ^ ")"
+  | Letrec (v, def, body) -> "Letrec (" ^ v ^ ", " ^ 
+                             (exp_to_abstract_string def) ^ ", " ^ 
+                             (exp_to_abstract_string body) ^ ")"
   | Raise -> "Raise"
   | Unassigned -> "Unassigned"
   | App (e1, e2) -> "App (" ^ (exp_to_abstract_string e1) ^ ", " ^ 
