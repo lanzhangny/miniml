@@ -153,7 +153,7 @@ let eval_s (exp : expr) (_env : Env.env) : Env.value =
   let rec eval_helper (exp : expr) : expr =
   match exp with
   | Var _ -> raise (EvalError "Unbound Variable")
-  | Num _ | Float _ | Bool _ | Fun (_, _)| Raise | Unassigned -> exp
+  | Num _ | Float _ | Bool _ | Fun (_, _) -> exp
   | Unop (op, e) -> unopeval op (eval_helper e)
   | Binop (op, e1, e2) -> binopeval op (eval_helper e1) (eval_helper e2)
   | Conditional (e1, e2, e3) -> (match eval_helper e1 with
@@ -161,12 +161,14 @@ let eval_s (exp : expr) (_env : Env.env) : Env.value =
                                              else eval_helper e3
                                  | _ -> raise (EvalError "Invalid Conditional"))
   | Let (x, def, body) -> eval_helper (subst x (eval_helper def) body)
-  | Letrec (x, def, body) -> eval_helper (subst x (subst x 
-                               (Letrec (x, (eval_helper def), Var(x))) 
-                                 (eval_helper def)) body)
+  | Letrec (x, def, body) -> let v_d = eval_helper def in
+                             eval_helper (subst x (subst x 
+                               (Letrec (x, v_d, Var(x))) v_d) body)
   | App (e1, e2) -> (match eval_helper e1 with
                      | Fun (x, e) -> eval_helper (subst x (eval_helper e2) e)
-                     | _ -> raise (EvalError "Invalid App")) in
+                     | _ -> raise (EvalError "Invalid App"))
+  | Raise -> raise EvalException
+  | Unassigned -> raise (EvalError "Unassigned") in
   Val (eval_helper exp) ;;
      
 (* Helper function that combines both the dynamic and lexical model 
@@ -174,9 +176,21 @@ let eval_s (exp : expr) (_env : Env.env) : Env.value =
    and if using the lexical model, the input dyn_eval = false *)
 let eval_both (dyn_eval : bool) (exp : expr) (env : Env.env) : Env.value =
   let rec eval_helper (exp : expr) (env : Env.env) : Env.value =
+    let app_d (exp1 : expr) (exp2 : expr) : Env.value =
+      match eval_helper exp1 env with
+      | Val (Fun (v, e)) -> let v_e2 = eval_helper exp2 env in
+                            let new_env = extend env v (ref v_e2) in
+                            eval_helper e new_env
+      | _ -> raise (EvalError "Invalid App") in
+    let app_l (exp1 : expr) (exp2 : expr) : Env.value =
+      match eval_helper exp1 env with
+      | Closure (Fun (v, e), env1) -> let v_e2 = eval_helper exp2 env in
+                                      let new_env = extend env1 v (ref v_e2) in
+                                      eval_helper e new_env
+      | _ -> raise (EvalError "Invalid App") in
     match exp with
     | Var v -> lookup env v
-    | Num _ | Float _ | Bool _ | Raise | Unassigned -> Val (exp)
+    | Num _ | Float _ | Bool _ -> Val (exp)
     | Unop (op, e) -> (match eval_helper e env with
                        | Val expr -> Val (unopeval op expr)
                        | _ -> raise (EvalError "Invalid Unop"))
@@ -184,44 +198,27 @@ let eval_both (dyn_eval : bool) (exp : expr) (env : Env.env) : Env.value =
                               | Val x, Val y -> Val (binopeval op x y)
                               | _, _ -> raise (EvalError "Invalid Binop"))
     | Conditional (e1, e2, e3) -> (match eval_helper e1 env with
-                                   | Val (Bool b) -> if b then 
-                                                       eval_helper e2 env 
-                                                     else eval_helper e3 env
-                                   | _ -> raise 
-                                            (EvalError "Invalid Conditional"))
+                                   | Val (Bool b) -> 
+                                       if b then eval_helper e2 env 
+                                       else eval_helper e3 env
+                                   | _ -> 
+                                       raise (EvalError "Invalid Conditional"))
     | Fun (_v, _e) -> if dyn_eval then Val (exp) else close exp env
     | Let (x, def, body) -> eval_helper body 
                               (extend env x (ref (eval_helper def env)))
-    | Letrec (x, def, body) -> let temp_val = ref (Val Unassigned) in
-                               let new_env = extend env x temp_val in
-                               let evaluated = eval_helper def (new_env) in
-                               if evaluated = Val Unassigned then
-                                 raise (EvalError "Invalid Letrec")
-                               else temp_val := evaluated;
-                               eval_helper body (new_env)
-    | App (e1, e2) -> (match eval_helper e1 env with
-                       | Val (Fun (v, e)) -> if dyn_eval then 
-                                               let v_e2 = eval_helper e2 env in
-                                               let new_env = extend env v 
-                                                 (ref v_e2) in
-                                               eval_helper e new_env
-                                             else 
-                                               raise (EvalError "Invalid App")
-                       | Closure (Fun (v, e), env1) -> if (not dyn_eval) then 
-                                                         let v_e2 = 
-                                                           eval_helper e2 env in
-                                                         let new_env = 
-                                                           extend env1 v 
-                                                             (ref v_e2) in
-                                                         eval_helper e new_env
-                                                       else raise (EvalError 
-                                                                  "Invalid App")
-                       | _ -> raise (EvalError "Invalid App"))
+    | Letrec (x, def, body) -> 
+        let temp_val = ref (Val Unassigned) in
+        let new_env = extend env x temp_val in
+        let evaluated = eval_helper def (new_env) in
+        if evaluated = Val Unassigned then raise (EvalError "Invalid Letrec")
+        else temp_val := evaluated; eval_helper body (new_env)
+    | App (e1, e2) -> if dyn_eval then app_d e1 e2 else app_l e1 e2
+    | Raise -> raise EvalException
+    | Unassigned -> raise (EvalError "Unassigned")
   in eval_helper exp env ;;
 
 
 (* The DYNAMICALLY-SCOPED ENVIRONMENT MODEL evaluator *)
-   
 let eval_d (exp : expr) (env : Env.env) : Env.value =
   eval_both true exp env ;;
   
@@ -246,4 +243,4 @@ let eval_e _ =
    above, not the evaluate function, so it doesn't matter how it's set
    when you submit your solution.) *)
    
-let evaluate = eval_d ;;
+let evaluate = eval_s ;;
