@@ -64,9 +64,9 @@ module Env : Env_type =
     let rec value_to_string ?(printenvp : bool = true) (v : value) : string =
       match v with
       | Val e -> exp_to_concrete_string e
-      | Closure (e, env) -> if printenvp then "[Expr: " ^ 
-                               (exp_to_concrete_string e) ^ ", " ^ 
-                               "Env: " ^ (env_to_string env) ^ "]"
+      | Closure (e, env) -> if printenvp then "[Expr: "  
+                              ^ (exp_to_concrete_string e) ^ ", " 
+                              ^ "Env: " ^ (env_to_string env) ^ "]"
                             else exp_to_concrete_string e
 
     (* Returns a printable string representation of an environment *)
@@ -76,9 +76,9 @@ module Env : Env_type =
       (match env with
       | [] -> ""
       | hd :: tl -> let (var, valref) = hd in 
-                    "(" ^ var ^ ", " ^ (value_to_string !valref) ^ ")" ^
-                      (if (List.length tl) >= 1 then "; " 
-                       else "") ^ env_string_helper tl) in
+                    "(" ^ var ^ ", " ^ (value_to_string !valref) ^ ")"
+                      ^ (if (List.length tl) >= 1 then "; " 
+                         else "") ^ env_string_helper tl) in
       env_string_helper env ^ "}" ;;
   end
 ;;
