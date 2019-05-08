@@ -111,6 +111,7 @@ let eval_t (exp : expr) (_env : Env.env) : Env.value =
   (* coerce the expr, unchanged, into a value *)
   Env.Val exp ;;
 
+(* Opening Env module *)
 open Env ;;
 
 (* Helper function for unary operation evaluation *)
@@ -163,7 +164,7 @@ let eval_s (exp : expr) (_env : Env.env) : Env.value =
   | Let (x, def, body) -> eval_helper (subst x (eval_helper def) body)
   | Letrec (x, def, body) -> let v_d = eval_helper def in
                              eval_helper (subst x (subst x 
-                               (Letrec (x, v_d, Var(x))) v_d) body)
+                               (Letrec (x, v_d, Var x)) v_d) body)
   | App (e1, e2) -> (match eval_helper e1 with
                      | Fun (x, e) -> eval_helper (subst x (eval_helper e2) e)
                      | _ -> raise (EvalError "Invalid App"))

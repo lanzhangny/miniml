@@ -95,38 +95,67 @@ let exp_45 = Let ("x", Float 1., Let ("f", Fun ("y", Binop (Plus_f, Var "x", Var
 let exp_46 = Let ("x", Float 5., Let ("f", Fun ("y", Binop (Times_f, Float 2., 
   Binop (Times_f, Var "x", Var "y"))), Let ("x", Float 3., App (Var "f", Float 4.)))) ;;
 
-(* open Env ;;
+(* exp_to_abstract_string tests *)
+let abstract_string_tests() =
+  assert (exp_to_abstract_string exp_17 = "Num (18)") ;
+  assert (exp_to_abstract_string exp_18 = "Float (18.)") ;
+  assert (exp_to_abstract_string exp_19 = "Bool (false)") ;
+  assert (exp_to_abstract_string exp_20 = "Unop (Negate, Num (13))") ;
+  assert (exp_to_abstract_string exp_21 = "Unop (Negate_f, Float (13.))") ;
+  assert (exp_to_abstract_string exp_22 = "Binop (Plus, Num (3), Num (4))") ;
+  assert (exp_to_abstract_string exp_23 = "Binop (Plus_f, Float (3.), Float (4.))") ;
+  assert (exp_to_abstract_string exp_24 = "Binop (Minus, Num (5), Num (32))") ;
+  assert (exp_to_abstract_string exp_25 = "Binop (Minus_f, Float (32.), Float (5.))") ;
+  assert (exp_to_abstract_string exp_26 = "Binop (Times, Num (-2), Num (28))") ;
+  assert (exp_to_abstract_string exp_27 = "Binop (Times_f, Float (-2.), Float (28.))") ;
+  assert (exp_to_abstract_string exp_28 = "Binop (Divide, Num (3), Num (2))") ;
+  assert (exp_to_abstract_string exp_29 = "Binop (Divide_f, Float (3.), Float (8.))") ;
+  assert (exp_to_abstract_string exp_30 = "Binop (Equals, Num (5), Num (6))") ;
+  assert (exp_to_abstract_string exp_31 = "Binop (LessThan, Float (3.), Float (6.))") ;
+  assert (exp_to_abstract_string exp_32 = "Binop (LessThan, Num (5), Num (2))") ;
+  assert (exp_to_abstract_string exp_33 = "Binop (GreaterThan, Float (3.), Float (6.))") ;
+  assert (exp_to_abstract_string exp_34 = "Binop (GreaterThan, Num (8), Num (2))") ;
+  assert (exp_to_abstract_string exp_35 = "Let (x, Num (8), Conditional (Binop (Equals, Var (x), Num (3)), Num (1), Num (0)))") ;
+  assert (exp_to_abstract_string exp_36 = "Let (x, Bool (true), Conditional (Var (x), Num (1), Num (0)))") ;
+  assert (exp_to_abstract_string exp_37 = "App (Fun (x, Binop (Plus, Var (x), Var (x))), Num (5))") ;
+  assert (exp_to_abstract_string exp_38 = "Let (x, Num (30), Let (x, Let (x, Num (3), Binop (Times, Var (x), Num (10))), Binop (Plus, Var (x), Var (x))))") ;
+  assert (exp_to_abstract_string exp_39 = "Let (x, Num (3), Let (y, Binop (Times, Var (x), Var (x)), Var (y)))") ;
+  assert (exp_to_abstract_string exp_40 = "Letrec (f, Fun (n, Conditional (Binop (Equals, Var (n), Num (0)), Num (1), Binop (Times, Var (n), App (Var (f), Binop (Minus, Var (n), Num (1)))))), App (Var (f), Num (4)))") ;
+  assert (exp_to_abstract_string exp_42 = "Letrec (f, Fun (x, Conditional (Binop (LessThan, Var (x), Num (1)), Num (1), Binop (Plus, App (Var (f), Binop (Minus, Var (x), Num (1))), App (Var (f), Binop (Minus, Var (x), Num (2)))))), App (Var (f), Num (5)))") ;
+  assert (exp_to_abstract_string exp_44 = "Let (x, Num (5), Let (f, Fun (y, Binop (Times, Num (2), Binop (Times, Var (x), Var (y)))), Let (x, Num (3), App (Var (f), Num (4)))))") ;;
 
-let expressions_list = [exp_17; exp_18; exp_19; exp_20; exp_21; exp_22; exp_23; exp_24;
-                        exp_25; exp_26; exp_27; exp_28; exp_29; exp_30; exp_31; exp_32;
-                        exp_33; exp_34; exp_35; exp_36; exp_37; exp_38; exp_39; exp_40;
-                        exp_41; exp_42; exp_43; exp_44; exp_45; exp_46] ;;
-let solutions_1_list = [Val (Num 18); Val (Float 18.); Val (Bool false); Val (Num (~-13)); 
-                        Val (Float (~-.13.)); Val (Num 7); Val (Float 7.); Val (Num (~-27)); 
-                        Val (Float 27.); Val (Num (~-56)); Val (Float (~-.56.)); Val (Num 1);
-                        Val (Float 0.375); Val (Bool false); Val (Bool true); Val (Bool false);
-                        Val (Bool false); Val (Bool true); Val (Num 0); Val (Num 1); Val (Num 10);
-                        Val (Num 60); Val (Num 9); Val (Num 24); Val (Float 24.); Val (Num 13);
-                        Val (Num 4); Val (Num 40); Val (Float 4.); Val (Float 40.)] ;;
+(* exp_to_concrete_string tests *)
+let concrete_string_tests() =
+  assert (exp_to_concrete_string exp_17 = "18") ;
+  assert (exp_to_concrete_string exp_18 = "18.") ;
+  assert (exp_to_concrete_string exp_19 = "false") ;
+  assert (exp_to_concrete_string exp_20 = "~- 13") ;
+  assert (exp_to_concrete_string exp_21 = "~-. 13.") ;
+  assert (exp_to_concrete_string exp_22 = "3 + 4") ;
+  assert (exp_to_concrete_string exp_23 = "3. +. 4.") ;
+  assert (exp_to_concrete_string exp_24 = "5 - 32") ;
+  assert (exp_to_concrete_string exp_25 = "32. -. 5.") ;
+  assert (exp_to_concrete_string exp_26 = "-2 * 28") ;
+  assert (exp_to_concrete_string exp_27 = "-2. *. 28.") ;
+  assert (exp_to_concrete_string exp_28 = "3 / 2") ;
+  assert (exp_to_concrete_string exp_29 = "3. /. 8.") ;
+  assert (exp_to_concrete_string exp_30 = "5 = 6") ;
+  assert (exp_to_concrete_string exp_31 = "3. < 6.") ;
+  assert (exp_to_concrete_string exp_32 = "5 < 2") ;
+  assert (exp_to_concrete_string exp_33 = "3. > 6.") ;
+  assert (exp_to_concrete_string exp_34 = "8 > 2") ;
+  assert (exp_to_concrete_string exp_35 = "let x = 8 in if x = 3 then 1 else 0") ;
+  assert (exp_to_concrete_string exp_36 = "let x = true in if x then 1 else 0") ;
+  assert (exp_to_concrete_string exp_37 = "fun x -> x + x (5)") ;
+  assert (exp_to_concrete_string exp_38 = "let x = 30 in let x = let x = 3 in x * 10 in x + x") ;
+  assert (exp_to_concrete_string exp_39 = "let x = 3 in let y = x * x in y") ;
+  assert (exp_to_concrete_string exp_40 = "let rec f = fun n -> if n = 0 then 1 else n * f (n - 1) in f (4)") ;
+  assert (exp_to_concrete_string exp_42 = "let rec f = fun x -> if x < 1 then 1 else f (x - 1) + f (x - 2) in f (5)") ;
+  assert (exp_to_concrete_string exp_44 = "let x = 5 in let f = fun y -> 2 * x * y in let x = 3 in f (4)") ;;
 
-
-let rec eval_tester (eval : expr -> Env.env -> Env.value) 
-                	(exp_list : expr list)
-                	(sol_list : Env.value list)
-                	(counter : int)
-                	: unit =
-  let empty = Env.create() in
-  match exp_list, sol_list with
-  | [], [] -> ()
-  | [], _ | _, [] -> failwith "expressions and solutions lists of different length"
-  | exp1 :: tl1, sol1 :: tl2 -> if (eval exp1 empty = sol1) then eval_tester eval tl1 tl2 (counter + 1)
-                                else failwith ("the expression in position " ^
-                                (string_of_int counter) ^ " does not match the solution.") ;; *)
- 
 let empty = Env.create() ;;
 
 let eval_s_tests() =
-(*   eval_tester eval_s expressions_list solutions_1_list 0;; *)
   assert (eval_s exp_17 empty = Env.Val (Num 18)) ;
   assert (eval_s exp_18 empty = Env.Val (Float 18.)) ;
   assert (eval_s exp_19 empty = Env.Val (Bool false)) ;
@@ -240,6 +269,8 @@ let eval_l_tests() =
 let _ =
   free_vars_tests() ;
   subst_tests() ;
+  concrete_string_tests() ;
+  abstract_string_tests() ;
   eval_s_tests() ;
   env_mod_tests() ;
   eval_d_tests() ;
