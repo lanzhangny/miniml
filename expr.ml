@@ -69,8 +69,8 @@ let vars_of_list : string list -> varidset =
   SS.of_list ;;
   
 (* free_vars : expr -> varidset
-   Return a set of the variable names that are free in expression
-   exp *)
+   Return a set of the variable names that are free in expression exp 
+*)
 let rec free_vars (exp : expr) : varidset =
   match exp with
   | Var x -> SS.singleton x
@@ -106,7 +106,8 @@ let new_varname : unit -> varid =
  *)
 
 (* subst : varid -> expr -> expr -> expr
-   Substitute repl for free occurrences of var_name in exp *)
+   Substitute repl for free occurrences of var_name in exp 
+*)
 let rec subst (var_name : varid) (repl : expr) (exp : expr) : expr =
   match exp with
   | Var x -> if x = var_name then repl else exp
@@ -140,7 +141,8 @@ let rec subst (var_name : varid) (repl : expr) (exp : expr) : expr =
  *)
     
 (* exp_to_concrete_string : expr -> string
-   Returns a concrete syntax string representation of the expr *)
+   Returns a concrete syntax string representation of the expr 
+*)
 let rec exp_to_concrete_string (exp : expr) : string =
   match exp with
   | Var v -> v
@@ -179,7 +181,8 @@ let rec exp_to_concrete_string (exp : expr) : string =
                       ^ (exp_to_concrete_string e2) ^ ")" ;;
 
 (* exp_to_abstract_string : expr -> string
-   Returns a string representation of the abstract syntax of the expr *)
+   Returns a string representation of the abstract syntax of the expr 
+*)
 let rec exp_to_abstract_string (exp : expr) : string =
   match exp with
   | Var v -> "Var (" ^ v ^ ")"
