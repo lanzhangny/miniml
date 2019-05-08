@@ -218,7 +218,6 @@ let eval_both (dyn_eval : bool) (exp : expr) (env : Env.env) : Env.value =
     | Unassigned -> raise (EvalError "Unassigned")
   in eval_helper exp env ;;
 
-
 (* The DYNAMICALLY-SCOPED ENVIRONMENT MODEL evaluator *)
 let eval_d (exp : expr) (env : Env.env) : Env.value =
   eval_both true exp env ;;
@@ -244,4 +243,4 @@ let eval_e _ =
    above, not the evaluate function, so it doesn't matter how it's set
    when you submit your solution.) *)
    
-let evaluate = eval_s ;;
+let evaluate = eval_l ;;

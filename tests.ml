@@ -78,10 +78,10 @@ let exp_37 = App ((Fun ("x", Binop (Plus, Var "x", Var "x"))), Num 5) ;;
 let exp_38 = Let ("x", Num 30, Let ("x", Let ("x", Num 3, Binop (Times, Var "x", Num 10)), 
   Binop (Plus, Var "x", Var "x"))) ;;
 let exp_39 = Let ("x", Num 3, Let ("y", Binop (Times, Var "x", Var "x"), Var "y")) ;;
-let exp_40 = Letrec ("f", Fun ("n", Conditional (Binop(Equals, Var "n", Num 0), Num 1, 
-  Binop (Times, Var "n", App (Var "f", Binop(Minus, Var "n", Num 1))))), App (Var "f", Num 4)) ;;
-let exp_41 = Letrec ("f", Fun ("n", Conditional (Binop(Equals, Var "n", Float 0.), Float 1., 
-  Binop(Times_f, Var "n", App (Var "f", Binop(Minus_f, Var "n", Float 1.))))), 
+let exp_40 = Letrec ("f", Fun ("x", Conditional (Binop(Equals, Var "x", Num 0), Num 1, 
+  Binop (Times, Var "x", App (Var "f", Binop(Minus, Var "x", Num 1))))), App (Var "f", Num 4)) ;;
+let exp_41 = Letrec ("f", Fun ("x", Conditional (Binop(Equals, Var "x", Float 0.), Float 1., 
+  Binop(Times_f, Var "x", App (Var "f", Binop(Minus_f, Var "x", Float 1.))))), 
     App (Var "f", Float 4.)) ;;
 let exp_42 = Letrec ("f", Fun ("x", Conditional (Binop (LessThan, Var "x", Num 1), Num 1, 
   Binop (Plus, (App(Var "f", Binop (Minus, Var "x", Num 1))), (App(Var "f", 
@@ -120,7 +120,7 @@ let abstract_string_tests() =
   assert (exp_to_abstract_string exp_37 = "App (Fun (x, Binop (Plus, Var (x), Var (x))), Num (5))") ;
   assert (exp_to_abstract_string exp_38 = "Let (x, Num (30), Let (x, Let (x, Num (3), Binop (Times, Var (x), Num (10))), Binop (Plus, Var (x), Var (x))))") ;
   assert (exp_to_abstract_string exp_39 = "Let (x, Num (3), Let (y, Binop (Times, Var (x), Var (x)), Var (y)))") ;
-  assert (exp_to_abstract_string exp_40 = "Letrec (f, Fun (n, Conditional (Binop (Equals, Var (n), Num (0)), Num (1), Binop (Times, Var (n), App (Var (f), Binop (Minus, Var (n), Num (1)))))), App (Var (f), Num (4)))") ;
+  assert (exp_to_abstract_string exp_40 = "Letrec (f, Fun (x, Conditional (Binop (Equals, Var (x), Num (0)), Num (1), Binop (Times, Var (x), App (Var (f), Binop (Minus, Var (x), Num (1)))))), App (Var (f), Num (4)))") ;
   assert (exp_to_abstract_string exp_42 = "Letrec (f, Fun (x, Conditional (Binop (LessThan, Var (x), Num (1)), Num (1), Binop (Plus, App (Var (f), Binop (Minus, Var (x), Num (1))), App (Var (f), Binop (Minus, Var (x), Num (2)))))), App (Var (f), Num (5)))") ;
   assert (exp_to_abstract_string exp_44 = "Let (x, Num (5), Let (f, Fun (y, Binop (Times, Num (2), Binop (Times, Var (x), Var (y)))), Let (x, Num (3), App (Var (f), Num (4)))))") ;;
 
@@ -149,7 +149,7 @@ let concrete_string_tests() =
   assert (exp_to_concrete_string exp_37 = "fun x -> x + x (5)") ;
   assert (exp_to_concrete_string exp_38 = "let x = 30 in let x = let x = 3 in x * 10 in x + x") ;
   assert (exp_to_concrete_string exp_39 = "let x = 3 in let y = x * x in y") ;
-  assert (exp_to_concrete_string exp_40 = "let rec f = fun n -> if n = 0 then 1 else n * f (n - 1) in f (4)") ;
+  assert (exp_to_concrete_string exp_40 = "let rec f = fun x -> if x = 0 then 1 else x * f (x - 1) in f (4)") ;
   assert (exp_to_concrete_string exp_42 = "let rec f = fun x -> if x < 1 then 1 else f (x - 1) + f (x - 2) in f (5)") ;
   assert (exp_to_concrete_string exp_44 = "let x = 5 in let f = fun y -> 2 * x * y in let x = 3 in f (4)") ;;
 
